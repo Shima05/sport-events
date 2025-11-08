@@ -14,8 +14,13 @@ from app.services import EventService, ValidationError
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
+
+def get_event_service() -> EventService:
+    return EventService()
+
+
 SessionDep = Annotated[AsyncSession, Depends(get_db_session)]
-ServiceDep = Annotated[EventService, Depends(EventService)]
+ServiceDep = Annotated[EventService, Depends(get_event_service)]
 
 SportIdQuery = Annotated[UUID | None, Query()]
 DateFromQuery = Annotated[AwareDatetime | None, Query(description="ISO 8601 with timezone")]
