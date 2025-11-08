@@ -8,3 +8,4 @@
 - AI assistant reviewed the SQLAlchemy async session + data model code against the official docs (https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) to ensure best practices.
 - AI assistant helped me both unit tests (metadata checks) and integration tests (migration upgrade/downgrade) for coverage of the new DB layer.
 - AI assistant reviewed repository/service code for best practices and helped write the new integration tests that create/list events end-to-end.
+- AI assistant also helped expand FastAPI route integration tests for the `/events` endpoints.

@@ -113,3 +113,28 @@ Apply Ruff’s auto-fixes if desired:
 ```bash
 ruff check backend/src backend/tests --fix
 ```
+
+---
+
+## API Endpoints
+
+Base URL: `http://localhost:8000/api/v1`
+
+- `GET /health` – readiness probe.
+- `POST /events` – create a new event (`EventCreate` payload).
+- `GET /events` – list events (optional `sport_id`, `date_from`, `date_to` filters).
+- `GET /events/{event_id}` – retrieve one event.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/events \
+  -H "Content-Type: application/json" \
+  -d '{
+        "sport_id": "REPLACE_WITH_REAL_SPORT_UUID",
+        "title": "Friendly Match",
+        "starts_at": "2025-01-01T12:00:00Z",
+        "ends_at": "2025-01-01T14:00:00Z",
+        "participants": []
+      }'
+```
