@@ -42,6 +42,12 @@ uvicorn app.main:app --reload --app-dir backend/src --host 0.0.0.0 --port 8000
 docker compose -f .dev/docker-compose.yml --env-file backend/.env up -d db
 ```
 
+**Remove Database**
+
+```bash
+docker compose -f .dev/docker-compose.yml down -v   # removes db_data
+```
+
 This boots PostgreSQL 16 (`sc_postgres`) plus pgAdmin (http://localhost:5050). Use
 the same credentials in `backend/.env` so FastAPI + Alembic can connect.
 Async SQLAlchemy sessions follow the official guidance:
@@ -64,7 +70,8 @@ cd backend
 python -m scripts.seed_reference
 ```
 
-Seeds insert baseline sports only if they do not already exist.
+Seeds insert baseline sports, venues, and a few teams only if they do not already exist. Feel free to edit `app/db/seeds.py`
+to add more demo data.
 
 ## Domain Model & Data Assumptions
 

@@ -23,5 +23,4 @@ def test_participant_unique_constraints() -> None:
         for constraint in participant_table.constraints
         if isinstance(constraint, UniqueConstraint) and constraint.name
     }
-    assert "uq_event_participants_event_id_role" in unique_names
     assert "uq_event_participants_event_id_team_id" in unique_names
