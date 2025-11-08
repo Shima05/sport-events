@@ -5,19 +5,18 @@ repos:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
+
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
       - id: black
         args: ["--line-length", "120"]
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--line-length", "120"]
-  - repo: https://github.com/pytest-dev/pytest
-    rev: 8.3.3
+
+  - repo: local
     hooks:
       - id: pytest
-        additional_dependencies: ["pytest-asyncio", "httpx"]
-        args: ["backend/tests"]
+        name: Run pytest
+        entry: pytest -q backend/tests
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

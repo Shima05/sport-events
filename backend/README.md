@@ -19,7 +19,7 @@ From the repository root:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e backend/.[dev]
+pip install -e 'backend/.[dev]'
 ```
 
 Dependencies are defined in `backend/pyproject.toml`.
@@ -33,6 +33,38 @@ uvicorn app.main:app --reload --app-dir backend/src --host 0.0.0.0 --port 8000
 ```
 
 ## Add configuration values to `backend/.env` (see `.env.dist` for inspiration)
+
+---
+
+## Database via Docker Compose
+
+```bash
+docker compose -f .dev/docker-compose.yml --env-file backend/.env up -d db
+```
+
+This boots PostgreSQL 16 (`sc_postgres`) plus pgAdmin (http://localhost:5050). Use
+the same credentials in `backend/.env` so FastAPI + Alembic can connect.
+Async SQLAlchemy sessions follow the official guidance:
+[SQLAlchemy asyncio docs](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html).
+
+### Migrations
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+Alembic reads `SYNC_DATABASE_URL` from `.env`. Run `alembic downgrade base` if you
+need to reset the schema locally.
+
+### Seed reference data
+
+```bash
+cd backend
+python -m scripts.seed_reference
+```
+
+Seeds insert baseline sports only if they do not already exist.
 
 ## Domain Model & Data Assumptions
 
@@ -54,6 +86,10 @@ coverage run -m pytest backend/tests
 coverage report
 ```
 
+Integration tests that rely on a real PostgreSQL instance expect
+`TEST_DATABASE_URL` to be defined (e.g.,
+`postgresql+psycopg://postgres:postgres@localhost:5433/sports_events_test`).
+
 ---
 
 ## Linting & Formatting
@@ -63,7 +99,6 @@ All style tools share their configuration via `backend/pyproject.toml`.
 ```bash
 ruff check backend/src backend/tests         # static analysis
 black backend/src backend/tests              # code formatter
-isort backend/src backend/tests              # import sorter
 ```
 
 Apply Ruff’s auto-fixes if desired:

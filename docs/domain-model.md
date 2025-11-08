@@ -1,6 +1,8 @@
 # Sports Events Domain Model
 
 This doc defines the domain language + data model that we’ll use for the Sports Events product.
+Implementation references: SQLAlchemy async ORM guide  
+https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html
 
 ### Domain Terms
 
