@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Select, select
@@ -10,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.event import Event, EventParticipant
 from app.schemas.event import EventCreate
+from app.services.event_filters import EventListParams
 
 
 class EventRepository:
@@ -30,7 +29,6 @@ class EventRepository:
             ticket_url=data.ticket_url,
             participants=[EventParticipant(team_id=p.team_id, role=p.role) for p in data.participants],
         )
-
         session.add(event)
         await session.flush()
         return event
@@ -39,39 +37,35 @@ class EventRepository:
         self,
         session: AsyncSession,
         *,
-        sport_id: UUID | None = None,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
-        limit: int | None = None,
-        offset: int | None = None,
-        overlap: bool = False,
-    ) -> Sequence[Event]:
-        query: Select[Event] = select(Event).options(selectinload(Event.participants)).order_by(Event.starts_at)
+        params: EventListParams,
+    ) -> list[Event]:
+        order_col = Event.starts_at.desc() if params.order_desc else Event.starts_at.asc()
+        q: Select[Event] = select(Event).options(selectinload(Event.participants)).order_by(order_col, Event.id)
 
-        if sport_id:
-            query = query.where(Event.sport_id == sport_id)
+        if params.sport_id:
+            q = q.where(Event.sport_id == params.sport_id)
+        if params.venue_id:
+            q = q.where(Event.venue_id == params.venue_id)
+        if params.status:
+            q = q.where(Event.status == params.status)
+        if params.date_from:
+            q = q.where(Event.starts_at >= params.date_from)
+        if params.date_to:
+            q = q.where(Event.starts_at <= params.date_to)
 
-        if date_from and date_to and overlap:
-            query = query.where((Event.ends_at >= date_from) & (Event.starts_at <= date_to))
-        else:
-            if date_from:
-                query = query.where(Event.starts_at >= date_from)
-            if date_to:
-                query = query.where(Event.starts_at <= date_to)
+        if params.limit:
+            q = q.limit(params.limit)
+        if params.offset:
+            q = q.offset(params.offset)
 
-        if limit is not None:
-            query = query.limit(limit)
-        if offset is not None:
-            query = query.offset(offset)
-
-        result = await session.execute(query)
-        return list(result.scalars().all())
+        result = await session.scalars(q)
+        return list(result.all())
 
     async def get(
         self,
         session: AsyncSession,
         event_id: UUID,
     ) -> Event | None:
-        query = select(Event).options(selectinload(Event.participants)).where(Event.id == event_id)
-        result = await session.execute(query)
-        return result.scalar_one_or_none()
+        q = select(Event).options(selectinload(Event.participants)).where(Event.id == event_id)
+        result = await session.scalars(q)
+        return result.one_or_none()

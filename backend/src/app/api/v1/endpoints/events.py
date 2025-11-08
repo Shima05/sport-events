@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import Annotated
 from uuid import UUID
 
@@ -9,8 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_session
+from app.models.event import EventStatus
 from app.schemas import EventCreate, EventRead
 from app.services import EventService, ValidationError
+from app.services.event_filters import EventListParams, Pagination
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -22,9 +25,43 @@ def get_event_service() -> EventService:
 SessionDep = Annotated[AsyncSession, Depends(get_db_session)]
 ServiceDep = Annotated[EventService, Depends(get_event_service)]
 
-SportIdQuery = Annotated[UUID | None, Query()]
-DateFromQuery = Annotated[AwareDatetime | None, Query(description="ISO 8601 with timezone")]
-DateToQuery = Annotated[AwareDatetime | None, Query(description="ISO 8601 with timezone")]
+SportIdQuery = Annotated[UUID | None, Query(alias="sport_id", description="Filter by sport UUID")]
+VenueIdQuery = Annotated[UUID | None, Query(alias="venue_id", description="Filter by venue UUID")]
+StatusQuery = Annotated[EventStatus | None, Query(alias="status", description="Filter by event status")]
+DateFromQuery = Annotated[AwareDatetime | None, Query(description="Filter: start >= date_from (ISO 8601 with tz)")]
+DateToQuery = Annotated[AwareDatetime | None, Query(description="Filter: start <= date_to (ISO 8601 with tz)")]
+
+
+class OrderDirection(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
+def get_event_list_params(
+    sport_id: SportIdQuery = None,
+    venue_id: VenueIdQuery = None,
+    status_filter: StatusQuery = None,
+    date_from: DateFromQuery = None,
+    date_to: DateToQuery = None,
+    order: Annotated[OrderDirection, Query(description="Sort by starts_at")] = OrderDirection.asc,
+    page: Annotated[int, Query(ge=1, description="Page number (1-based)")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
+) -> EventListParams:
+    if date_from and date_to and date_from > date_to:
+        # 400 here reads nicer than a server error deeper down
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="date_from must be <= date_to")
+    return EventListParams(
+        sport_id=sport_id,
+        venue_id=venue_id,
+        status=status_filter,
+        date_from=date_from,
+        date_to=date_to,
+        order_desc=(order == OrderDirection.desc),
+        pagination=Pagination(page=page, page_size=page_size),
+    )
+
+
+ParamsDep = Annotated[EventListParams, Depends(get_event_list_params)]
 
 
 @router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
@@ -55,16 +92,9 @@ async def create_event(
 async def list_events(
     session: SessionDep,
     service: ServiceDep,
-    sport_id: SportIdQuery = None,
-    date_from: DateFromQuery = None,
-    date_to: DateToQuery = None,
+    params: ParamsDep,
 ) -> list[EventRead]:
-    events = await service.list_events(
-        session,
-        sport_id=sport_id,
-        date_from=date_from,
-        date_to=date_to,
-    )
+    events = await service.list_events(session, params=params)
     return [EventRead.model_validate(e) for e in events]
 
 

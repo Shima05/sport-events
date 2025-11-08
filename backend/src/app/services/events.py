@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.event import Event, EventParticipantRole
 from app.repositories import EventRepository, TeamRepository
 from app.schemas.event import EventCreate
+from app.services.event_filters import EventListParams
 from app.services.exceptions import ValidationError
 
 
@@ -17,8 +18,8 @@ class EventService:
         event_repository: EventRepository | None = None,
         team_repository: TeamRepository | None = None,
     ) -> None:
-        self._events = event_repository or EventRepository()
-        self._teams = team_repository or TeamRepository()
+        self._events: EventRepository = event_repository or EventRepository()
+        self._teams: TeamRepository = team_repository or TeamRepository()
 
     async def create_event(
         self,
@@ -35,16 +36,10 @@ class EventService:
         self,
         session: AsyncSession,
         *,
-        sport_id: UUID | None = None,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
+        params: EventListParams | None = None,
     ) -> list[Event]:
-        return await self._events.list(
-            session,
-            sport_id=sport_id,
-            date_from=date_from,
-            date_to=date_to,
-        )
+        params = params or EventListParams()
+        return await self._events.list(session, params=params)
 
     async def get_event(
         self,

@@ -12,11 +12,11 @@ from app.api.deps import get_db_session
 from app.db.seeds import seed_reference_data
 from app.main import app
 from app.models import Sport, Team
-from app.models.event import EventParticipantRole
+from app.models.event import EventParticipantRole, EventStatus
 
 
 @pytest.fixture()
-async def api_client(async_db_session: AsyncSession):
+async def api_client(async_db_session: AsyncSession) -> AsyncClient:
     async def _override_session():
         yield async_db_session
 
@@ -102,6 +102,64 @@ async def test_create_event_team_sport_mismatch_returns_422(async_db_session: As
     assert resp.status_code == 422
     msg = resp.json().get("detail", "").lower()
     assert "does not belong to the event sport" in msg or "must belong to the event sport" in msg
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_list_events_supports_filters_and_pagination(async_db_session: AsyncSession, api_client: AsyncClient):
+    await seed_reference_data(async_db_session)
+    sport = await _get_first_sport(async_db_session)
+    teams = await _get_teams_for_sport(async_db_session, sport.id, limit=2)
+
+    base = datetime.now(tz=UTC)
+    for idx, status in enumerate([EventStatus.SCHEDULED, EventStatus.LIVE, EventStatus.FINISHED]):
+        start = base + timedelta(hours=idx)
+        payload = {
+            "sport_id": str(sport.id),
+            "title": f"Event {idx}",
+            "starts_at": start.isoformat(),
+            "ends_at": (start + timedelta(hours=1)).isoformat(),
+            "status": status.value,
+            "participants": [
+                {"team_id": str(teams[0].id), "role": EventParticipantRole.HOME.value},
+                {"team_id": str(teams[1].id), "role": EventParticipantRole.AWAY.value},
+            ],
+        }
+        create = await api_client.post("/api/v1/events", json=payload)
+        create.raise_for_status()
+        loc = create.headers.get("Location")
+        if loc:
+            assert loc.endswith(create.json()["id"])
+
+    resp = await api_client.get(
+        "/api/v1/events",
+        params={"sport_id": str(sport.id), "order": "desc", "page": 2, "page_size": 1},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["title"] == "Event 1"
+
+    resp = await api_client.get(
+        "/api/v1/events",
+        params={"sport_id": str(sport.id), "status": EventStatus.LIVE.value},
+    )
+    resp.raise_for_status()
+    filtered = resp.json()
+    assert len(filtered) == 1
+    assert filtered[0]["status"] == EventStatus.LIVE.value
+
+    resp = await api_client.get(
+        "/api/v1/events",
+        params={
+            "sport_id": str(sport.id),
+            "date_from": (base + timedelta(hours=1)).isoformat(),
+            "date_to": (base + timedelta(hours=2, minutes=30)).isoformat(),
+        },
+    )
+    resp.raise_for_status()
+    date_filtered = resp.json()
+    assert len(date_filtered) == 2
 
 
 # ----------------- helpers -----------------
