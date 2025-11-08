@@ -34,6 +34,11 @@ uvicorn app.main:app --reload --app-dir backend/src --host 0.0.0.0 --port 8000
 
 ## Add configuration values to `backend/.env` (see `.env.dist` for inspiration)
 
+## Domain Model & Data Assumptions
+
+- ERD and PostgreSQL-specific constraints live in
+  [docs/domain-model.md](../docs/domain-model.md).
+
 ## Tests & Coverage
 
 Run the test suite:
