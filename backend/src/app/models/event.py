@@ -44,13 +44,13 @@ class Event(Base):
 
     sport_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("sports.id", name="fk_events_sport_id_sports"),
+        ForeignKey("sports.id", name="_fk_events_sport_id_sports"),
         index=True,
     )
 
     venue_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("venues.id", name="fk_events_venue_id_venues"),
+        ForeignKey("venues.id", name="_fk_events_venue_id_venues"),
         nullable=True,
         index=True,
     )
@@ -120,13 +120,13 @@ class EventParticipant(Base):
 
     event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("events.id", name="fk_event_participants_event_id_events", ondelete="CASCADE"),
+        ForeignKey("events.id", name="_fk_event_participants_event_id_events", ondelete="CASCADE"),
         nullable=False,
     )
 
     team_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("teams.id", name="fk_event_participants_team_id_teams"),
+        ForeignKey("teams.id", name="_fk_event_participants_team_id_teams"),
         nullable=False,
     )
 

@@ -16,7 +16,7 @@ class Team(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sport_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("sports.id", name="fk_teams_sport_id_sports"),
+        ForeignKey("sports.id", name="_fk_teams_sport_id_sports"),
         index=True,
     )
     name: Mapped[str] = mapped_column(String(255))

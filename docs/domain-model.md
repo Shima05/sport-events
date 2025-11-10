@@ -67,4 +67,6 @@ erDiagram
         uuid team_id FK
         text role
     }
+# Foreign keys use `_fk_*` naming convention
+note for sports: FK constraint names follow `_fk_<table>_<column>_<ref>` format
 ```
