@@ -1,5 +1,6 @@
 from functools import cached_property
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,12 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None  # connection string
     SYNC_DATABASE_URL: str | None = None  # connection string for Alembic/tests
+    BACKEND_CORS_ORIGINS: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://localhost:5173",
+        ],
+    )
 
     @cached_property
     def async_database_url(self) -> str:
