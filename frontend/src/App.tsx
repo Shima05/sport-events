@@ -1,34 +1,71 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { defaultEventFilters, type EventsQuery } from '@api/events'
+import AppLayout from '@components/AppLayout'
+import { EventFilters } from '@components/EventFilters'
+import { EventList } from '@components/EventList'
+import { EventForm } from '@components/EventForm'
+import { PaginationControls } from '@components/PaginationControls'
+import { useEvents } from '@hooks/useEvents'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { events, loading, error, filters, setFilters, refresh } = useEvents()
+
+  const handleApplyFilters = (nextFilters: EventsQuery) => {
+    setFilters({ ...nextFilters, page: 1 })
+  }
+
+  const handleResetFilters = () => {
+    setFilters(defaultEventFilters)
+  }
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 1 || nextPage === (filters.page ?? 1)) {
+      return
+    }
+    setFilters({ page: nextPage })
+  }
+
+  const handleRefresh = () => {
+    void refresh()
+  }
+
+  const canGoNext = events.length === (filters.page_size ?? defaultEventFilters.page_size)
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <AppLayout>
+      <section className="page-hero" id="events">
+        <div>
+          <p className="eyebrow">Sports calendar</p>
+          <h1>Track every upcoming match in one place</h1>
+          <p className="muted">
+            Query the FastAPI backend in real time, filter by sport or date range and keep an eye on
+            the fixtures that matter.
+          </p>
+        </div>
+        <button type="button" className="primary" onClick={handleRefresh} disabled={loading}>
+          Refresh events
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      </section>
+
+      <section className="split-panels">
+        <EventFilters
+          filters={filters}
+          onApply={handleApplyFilters}
+          onReset={handleResetFilters}
+          disabled={loading}
+        />
+        <EventForm onCreated={handleRefresh} />
+      </section>
+      <EventList events={events} loading={loading} error={error} />
+
+      <PaginationControls
+        page={filters.page ?? 1}
+        pageSize={filters.page_size ?? defaultEventFilters.page_size}
+        canGoNext={canGoNext}
+        loading={loading}
+        onPageChange={handlePageChange}
+      />
+    </AppLayout>
   )
 }
 
