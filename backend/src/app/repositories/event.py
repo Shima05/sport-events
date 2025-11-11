@@ -31,7 +31,7 @@ class EventRepository:
         )
         session.add(event)
         await session.flush()
-        return event
+        return await self.get(session, event.id)
 
     async def list(
         self,
@@ -40,7 +40,14 @@ class EventRepository:
         params: EventListParams,
     ) -> list[Event]:
         order_col = Event.starts_at.desc() if params.order_desc else Event.starts_at.asc()
-        q: Select[Event] = select(Event).options(selectinload(Event.participants)).order_by(order_col, Event.id)
+        q: Select[Event] = (
+            select(Event)
+            .options(
+                selectinload(Event.participants).selectinload(EventParticipant.team),
+                selectinload(Event.sport),
+            )
+            .order_by(order_col, Event.id)
+        )
 
         if params.sport_id:
             q = q.where(Event.sport_id == params.sport_id)
@@ -66,6 +73,13 @@ class EventRepository:
         session: AsyncSession,
         event_id: UUID,
     ) -> Event | None:
-        q = select(Event).options(selectinload(Event.participants)).where(Event.id == event_id)
+        q = (
+            select(Event)
+            .options(
+                selectinload(Event.participants).selectinload(EventParticipant.team),
+                selectinload(Event.sport),
+            )
+            .where(Event.id == event_id)
+        )
         result = await session.scalars(q)
         return result.one_or_none()

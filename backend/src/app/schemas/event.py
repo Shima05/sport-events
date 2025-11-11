@@ -16,6 +16,7 @@ class EventParticipantCreate(Schema):
 class EventParticipantRead(Schema):
     team_id: UUID
     role: EventParticipantRole
+    team_name: str | None = None
 
 
 class EventCreate(Schema):
@@ -34,6 +35,7 @@ class EventRead(Schema):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     sport_id: UUID
+    sport_name: str | None = None
     venue_id: UUID | None
     title: str
     description: str | None
