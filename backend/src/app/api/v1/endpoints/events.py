@@ -22,6 +22,49 @@ def get_event_service() -> EventService:
     return EventService()
 
 
+def _describe_integrity_error(exc: IntegrityError) -> str:
+    orig = getattr(exc, "orig", None)
+    diag = getattr(orig, "diag", None)
+    constraint = (
+        getattr(diag, "constraint_name", None)
+        or getattr(orig, "constraint_name", None)
+        or getattr(orig, "constraint", None)
+    )
+    raw_message = str(orig) if orig else None
+
+    constraint_messages = {
+        "events_starts_before_ends": "Event end time must be after the start time.",
+        "_fk_events_sport_id_sports": "Sport referenced by sport_id does not exist.",
+        "fk_events_sport_id_sports": "Sport referenced by sport_id does not exist.",
+        "_fk_events_venue_id_venues": "Venue referenced by venue_id does not exist.",
+        "fk_events_venue_id_venues": "Venue referenced by venue_id does not exist.",
+        "_fk_event_participants_team_id_teams": "One or more participant teams do not exist.",
+        "fk_event_participants_team_id_teams": "One or more participant teams do not exist.",
+        "uq_event_participants_event_id_team_id": "Each team can only be added once to an event.",
+        "uq_event_participants_event_id_role_home_away": "Only one HOME and one AWAY participant is allowed per event.",
+    }
+
+    if constraint and constraint in constraint_messages:
+        return constraint_messages[constraint]
+    if raw_message:
+        lowered = raw_message.lower()
+        for key, message_text in constraint_messages.items():
+            if key.lower() in lowered:
+                return message_text
+
+    message = getattr(diag, "message_primary", None)
+    if message:
+        return message
+
+    if constraint:
+        return f"Constraint violation ({constraint}) while creating event."
+
+    if raw_message:
+        return raw_message
+
+    return "Constraint violation while creating event."
+
+
 SessionDep = Annotated[AsyncSession, Depends(get_db_session)]
 ServiceDep = Annotated[EventService, Depends(get_event_service)]
 
@@ -81,7 +124,7 @@ async def create_event(
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Constraint violation while creating event.",
+            detail=_describe_integrity_error(exc),
         ) from exc
 
     response.headers["Location"] = f"/events/{event.id}"

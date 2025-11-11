@@ -66,6 +66,41 @@ const parseResponseBody = async (response: Response): Promise<unknown> => {
   return response.text()
 }
 
+const extractDetailMessage = (payload: unknown): string | null => {
+  if (!payload) {
+    return null
+  }
+  if (typeof payload === 'string') {
+    return payload
+  }
+  if (typeof payload === 'object') {
+    if ('detail' in payload) {
+      const detail = (payload as { detail?: unknown }).detail
+      if (typeof detail === 'string') {
+        return detail
+      }
+      if (Array.isArray(detail)) {
+        const parts = detail
+          .map((item) => {
+            if (!item) return null
+            if (typeof item === 'string') return item
+            if (typeof item === 'object' && 'msg' in item && typeof item.msg === 'string')
+              return item.msg
+            return null
+          })
+          .filter(Boolean)
+        if (parts.length) {
+          return parts.join('; ')
+        }
+      }
+    }
+    if ('message' in payload && typeof (payload as { message?: unknown }).message === 'string') {
+      return (payload as { message: string }).message
+    }
+  }
+  return null
+}
+
 export const httpRequest = async <TResponse>(
   path: string,
   { method = 'GET', query, body, headers, signal }: HttpOptions = {},
@@ -86,7 +121,9 @@ export const httpRequest = async <TResponse>(
   const parsed = await parseResponseBody(response)
 
   if (!response.ok) {
-    throw new ApiError('Request to API failed', response.status, parsed)
+    const detail = extractDetailMessage(parsed)
+    const fallback = `Request failed with status ${response.status}`
+    throw new ApiError(detail ?? fallback, response.status, parsed as TResponse)
   }
 
   return parsed as TResponse
