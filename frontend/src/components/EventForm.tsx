@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { createEvent, type EventCreatePayload } from '@api/events'
+import { createEvent, type EventCreatePayload, type EventParticipantRole } from '@api/events'
+import { useSports } from '@hooks/useSports'
+import { useTeams } from '@hooks/useTeams'
 import { fromDateTimeLocalInput } from '@utils/datetime'
 
 const INITIAL_STATE = {
@@ -9,6 +11,8 @@ const INITIAL_STATE = {
   description: '',
   starts_at: '',
   ends_at: '',
+  home_team_id: '',
+  away_team_id: '',
 }
 
 interface EventFormProps {
@@ -20,12 +24,28 @@ export const EventForm = ({ onCreated }: EventFormProps): JSX.Element => {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const { sports, loading: sportsLoading, error: sportsError } = useSports()
+  const hasSports = sports.length > 0
+  const {
+    teams,
+    loading: teamsLoading,
+    error: teamsError,
+  } = useTeams(formState.sport_id || undefined)
+  const hasTeamOptions = teams.length > 0
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = event.target
     setFormState((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === 'sport_id'
+        ? {
+            home_team_id: '',
+            away_team_id: '',
+          }
+        : {}),
     }))
   }
 
@@ -36,7 +56,7 @@ export const EventForm = ({ onCreated }: EventFormProps): JSX.Element => {
     const endsAt = fromDateTimeLocalInput(formState.ends_at)
 
     if (!formState.sport_id.trim()) {
-      setError('Sport ID is required.')
+      setError('Sport is required.')
       return
     }
     if (!formState.title.trim()) {
@@ -48,6 +68,16 @@ export const EventForm = ({ onCreated }: EventFormProps): JSX.Element => {
       return
     }
 
+    const participants: EventCreatePayload['participants'] = []
+    const appendParticipant = (teamId: string, role: EventParticipantRole) => {
+      const trimmed = teamId.trim()
+      if (trimmed) {
+        participants.push({ team_id: trimmed, role })
+      }
+    }
+    appendParticipant(formState.home_team_id, 'home')
+    appendParticipant(formState.away_team_id, 'away')
+
     const payload: EventCreatePayload = {
       sport_id: formState.sport_id.trim(),
       venue_id: null,
@@ -57,7 +87,7 @@ export const EventForm = ({ onCreated }: EventFormProps): JSX.Element => {
       ends_at: endsAt,
       status: 'scheduled',
       ticket_url: null,
-      participants: [],
+      participants,
     }
 
     setSubmitting(true)
@@ -82,22 +112,120 @@ export const EventForm = ({ onCreated }: EventFormProps): JSX.Element => {
       <form className="event-form" onSubmit={handleSubmit} noValidate>
         <header>
           <p className="eyebrow">Create event</p>
-          <h2>Add a new fixture</h2>
-          <p className="muted">Enter the primary details below. You can always enrich it later.</p>
+          <h2>Add a new Event</h2>
+          <p className="muted">Enter the primary details below.</p>
         </header>
 
         <label>
-          <span>Sport ID *</span>
-          <input
-            type="text"
-            name="sport_id"
-            value={formState.sport_id}
-            onChange={handleChange}
-            placeholder="Sport UUID"
-            disabled={submitting}
-            required
-          />
+          <span>Sport *</span>
+          {hasSports ? (
+            <select
+              name="sport_id"
+              value={formState.sport_id}
+              onChange={handleChange}
+              disabled={submitting || sportsLoading}
+              required
+            >
+              <option value="">Select a sport</option>
+              {sports.map((sport) => (
+                <option key={sport.id} value={sport.id}>
+                  {sport.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              name="sport_id"
+              value={formState.sport_id}
+              onChange={handleChange}
+              placeholder="Sport UUID"
+              disabled={submitting}
+              required
+            />
+          )}
         </label>
+        {!hasSports && !sportsLoading && (
+          <p className="form-hint">No sports found. Enter the sport UUID manually.</p>
+        )}
+        {sportsError && (
+          <p className="form-feedback error" role="alert">
+            Unable to load sports list.
+          </p>
+        )}
+
+        <section className="participants-panel">
+          <h3>Participants</h3>
+          {!formState.sport_id && <p className="form-hint">Select a sport to choose teams.</p>}
+          {formState.sport_id && hasTeamOptions && (
+            <div className="form-grid">
+              <label>
+                <span>Home team</span>
+                <select
+                  name="home_team_id"
+                  value={formState.home_team_id}
+                  onChange={handleChange}
+                  disabled={teamsLoading || submitting}
+                >
+                  <option value="">Select home team</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Away team</span>
+                <select
+                  name="away_team_id"
+                  value={formState.away_team_id}
+                  onChange={handleChange}
+                  disabled={teamsLoading || submitting}
+                >
+                  <option value="">Select away team</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+          {formState.sport_id && !hasTeamOptions && !teamsLoading && (
+            <div className="form-grid">
+              <label>
+                <span>Home team ID</span>
+                <input
+                  type="text"
+                  name="home_team_id"
+                  value={formState.home_team_id}
+                  onChange={handleChange}
+                  placeholder="Home team UUID"
+                  disabled={submitting}
+                />
+              </label>
+              <label>
+                <span>Away team ID</span>
+                <input
+                  type="text"
+                  name="away_team_id"
+                  value={formState.away_team_id}
+                  onChange={handleChange}
+                  placeholder="Away team UUID"
+                  disabled={submitting}
+                />
+              </label>
+            </div>
+          )}
+          {teamsLoading && <p className="form-hint">Loading teams…</p>}
+          {teamsError && (
+            <p className="form-feedback error" role="alert">
+              Unable to load teams for the selected sport.
+            </p>
+          )}
+        </section>
 
         <label>
           <span>Title *</span>

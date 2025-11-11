@@ -10,11 +10,6 @@ export const AppLayout = ({ children }: PropsWithChildren): JSX.Element => (
           <p className="brand-subtitle">Live calendar</p>
         </div>
       </div>
-      <nav className="nav-links" aria-label="Primary">
-        <a href="#events">Events</a>
-        <a href="#filters">Filters</a>
-        <a href="#about">About</a>
-      </nav>
     </header>
     <main className="app-main">{children}</main>
   </div>

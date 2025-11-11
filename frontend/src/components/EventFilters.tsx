@@ -7,6 +7,7 @@ import {
   type EventsQuery,
   type OrderDirection,
 } from '@api/events'
+import { useSports } from '@hooks/useSports'
 import { fromDateTimeLocalInput, toDateTimeLocalInput } from '@utils/datetime'
 
 const STATUS_OPTIONS: (EventStatus | 'all')[] = [
@@ -60,6 +61,8 @@ export const EventFilters = ({
   disabled = false,
 }: EventFiltersProps): JSX.Element => {
   const [formState, setFormState] = useState<FormState>(() => toFormState(filters))
+  const { sports, loading: sportsLoading, error: sportsError } = useSports()
+  const hasSports = sports.length > 0
 
   useEffect(() => {
     setFormState(toFormState(filters))
@@ -88,16 +91,40 @@ export const EventFilters = ({
       <form className="filters-form" onSubmit={handleSubmit}>
         <div className="form-grid">
           <label>
-            <span>Sport ID</span>
-            <input
-              type="text"
-              name="sport_id"
-              value={formState.sport_id}
-              onChange={handleChange}
-              placeholder="UUID"
-              disabled={disabled}
-            />
+            <span>Sport</span>
+            {hasSports ? (
+              <select
+                name="sport_id"
+                value={formState.sport_id}
+                onChange={handleChange}
+                disabled={disabled || sportsLoading}
+              >
+                <option value="">All sports</option>
+                {sports.map((sport) => (
+                  <option key={sport.id} value={sport.id}>
+                    {sport.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                name="sport_id"
+                value={formState.sport_id}
+                onChange={handleChange}
+                placeholder="Sport UUID"
+                disabled={disabled}
+              />
+            )}
           </label>
+          {!hasSports && !sportsLoading && (
+            <p className="form-hint">No sports available yet. Filter by raw UUID.</p>
+          )}
+          {sportsError && (
+            <p className="form-feedback error" role="alert">
+              Unable to load sports list.
+            </p>
+          )}
 
           <label>
             <span>Status</span>

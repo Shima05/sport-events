@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { defaultEventFilters, type EventsQuery } from '@api/events'
 import AppLayout from '@components/AppLayout'
 import { EventFilters } from '@components/EventFilters'
@@ -9,6 +11,7 @@ import './App.css'
 
 function App() {
   const { events, loading, error, filters, setFilters, refresh } = useEvents()
+  const [isModalOpen, setModalOpen] = useState(false)
 
   const handleApplyFilters = (nextFilters: EventsQuery) => {
     setFilters({ ...nextFilters, page: 1 })
@@ -29,32 +32,29 @@ function App() {
     void refresh()
   }
 
+  const openModal = () => setModalOpen(true)
+  const closeModal = () => setModalOpen(false)
+
   const canGoNext = events.length === (filters.page_size ?? defaultEventFilters.page_size)
 
   return (
     <AppLayout>
-      <section className="page-hero" id="events">
-        <div>
-          <p className="eyebrow">Sports calendar</p>
-          <h1>Track every upcoming match in one place</h1>
-          <p className="muted">
-            Query the FastAPI backend in real time, filter by sport or date range and keep an eye on
-            the fixtures that matter.
-          </p>
-        </div>
-        <button type="button" className="primary" onClick={handleRefresh} disabled={loading}>
+      <div className="actions-bar">
+        <button type="button" className="secondary" onClick={handleRefresh} disabled={loading}>
           Refresh events
         </button>
-      </section>
+        <button type="button" className="primary" onClick={openModal}>
+          + Add event
+        </button>
+      </div>
 
-      <section className="split-panels">
+      <section className="filters-section">
         <EventFilters
           filters={filters}
           onApply={handleApplyFilters}
           onReset={handleResetFilters}
           disabled={loading}
         />
-        <EventForm onCreated={handleRefresh} />
       </section>
       <EventList events={events} loading={loading} error={error} />
 
@@ -65,6 +65,30 @@ function App() {
         loading={loading}
         onPageChange={handlePageChange}
       />
+
+      {isModalOpen && (
+        <div className="modal-backdrop" role="presentation" onClick={closeModal}>
+          <div
+            className="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2>Add a new event</h2>
+              <button type="button" className="icon-button" onClick={closeModal} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <EventForm
+              onCreated={async () => {
+                await refresh()
+                closeModal()
+              }}
+            />
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

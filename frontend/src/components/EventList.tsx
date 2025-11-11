@@ -1,5 +1,4 @@
 import type { EventRead } from '@api/events'
-import { formatDateRange } from '@utils/datetime'
 
 interface EventListProps {
   events: EventRead[]
@@ -9,6 +8,46 @@ interface EventListProps {
 
 const formatStatusLabel = (status: EventRead['status']): string =>
   status.charAt(0).toUpperCase() + status.slice(1)
+
+const formatDateSummary = (iso: string): string => {
+  const date = new Date(iso)
+  const weekday = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  }).format(date)
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const year = date.getUTCFullYear()
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  }).format(date)
+  return `${weekday}., ${day}.${month}.${year}, ${time}`
+}
+
+const formatParticipantsLine = (participants: EventRead['participants']): string | null => {
+  if (!participants?.length) {
+    return null
+  }
+  const home = participants.find((p) => p.role === 'home')
+  const away = participants.find((p) => p.role === 'away')
+  if (!home || !away) {
+    return null
+  }
+  const homeLabel = home.team_name ?? home.team_id
+  const awayLabel = away.team_name ?? away.team_id
+  return `${homeLabel} vs. ${awayLabel}`
+}
+
+const buildEventHeadline = (event: EventRead): string => {
+  const datePart = formatDateSummary(event.starts_at)
+  const sportLabel = event.sport_name ?? event.sport_id
+  const duel = formatParticipantsLine(event.participants)
+  const matchLabel = duel ?? event.title
+  return `${datePart}, ${sportLabel}, ${matchLabel}`
+}
 
 export const EventList = ({ events, loading, error }: EventListProps): JSX.Element => {
   if (loading) {
@@ -42,50 +81,13 @@ export const EventList = ({ events, loading, error }: EventListProps): JSX.Eleme
       {events.map((event) => (
         <article key={event.id} className="event-card">
           <header>
-            <p className={`status-badge status-${event.status}`}>
-              {formatStatusLabel(event.status)}
-            </p>
-            <h3>{event.title}</h3>
-            <p className="muted">{formatDateRange(event.starts_at, event.ends_at)}</p>
-          </header>
-          {event.description && <p className="event-description">{event.description}</p>}
-          <dl className="event-meta">
-            <div>
-              <dt>Sport</dt>
-              <dd className="mono">{event.sport_id}</dd>
+            <div className="event-headline">
+              <h3>{buildEventHeadline(event)}</h3>
+              <span className={`status-pill status-${event.status}`}>
+                {formatStatusLabel(event.status)}
+              </span>
             </div>
-            {event.venue_id && (
-              <div>
-                <dt>Venue</dt>
-                <dd className="mono">{event.venue_id}</dd>
-              </div>
-            )}
-            {event.ticket_url && (
-              <div>
-                <dt>Tickets</dt>
-                <dd>
-                  <a href={event.ticket_url} target="_blank" rel="noreferrer">
-                    Buy tickets ↗
-                  </a>
-                </dd>
-              </div>
-            )}
-          </dl>
-          <section className="participants">
-            <h4>Participants</h4>
-            {event.participants && event.participants.length > 0 ? (
-              <ul>
-                {event.participants.map((participant) => (
-                  <li key={`${participant.team_id}-${participant.role}`}>
-                    <span className={`role-chip role-${participant.role}`}>{participant.role}</span>
-                    <span className="mono">{participant.team_id}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">Participants will be announced soon.</p>
-            )}
-          </section>
+          </header>
         </article>
       ))}
     </section>
