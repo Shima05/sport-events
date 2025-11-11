@@ -1,20 +1,34 @@
-## Sports Events Backend
+# 🏟️ Sports Events Backend
 
-FastAPI skeleton for the Sports Events platform.
-
----
-
-## Requirements
-
-- Python 3.12+
-- `pip`
-- (Recommended) a virtual environment tool such as `venv` or `uv`
+A lightweight **FastAPI backend** for managing sports events — built as a foundation for a larger Sports Events platform.
+It provides clean project structure, database migrations, testing setup, and example endpoints for event management.
 
 ---
 
-## Installation
+## 🧭 Overview
 
-From the repository root:
+This backend is designed as a **FastAPI skeleton** that can easily evolve into a full sports management system.
+Key features:
+
+- Async FastAPI app following modern Python 3.12+ practices.
+- PostgreSQL + SQLAlchemy (async ORM) with Alembic migrations.
+- Docker-based local DB setup with pgAdmin UI.
+- Integrated testing, linting, and formatting tools for consistent development workflow.
+- Includes seed data and documentation for schema understanding.
+
+---
+
+## ⚙️ Requirements
+
+- **Python 3.12+**
+- **pip** (latest version)
+- _(Recommended)_ Virtual environment tool (`venv`, `uv`, or similar)
+
+---
+
+## 🚀 Setup Instructions
+
+Clone the repository and create a virtual environment:
 
 ```bash
 python3 -m venv .venv
@@ -22,93 +36,117 @@ source .venv/bin/activate
 pip install -e 'backend/.[dev]'
 ```
 
-Dependencies are defined in `backend/pyproject.toml`.
+All dependencies (including dev tools) are managed in `backend/pyproject.toml`.
 
 ---
 
-## Running the API locally
+## ▶️ Running the API Locally
 
 ```bash
 uvicorn app.main:app --reload --app-dir backend/src --host 0.0.0.0 --port 8000
 ```
 
-## Add configuration values to `backend/.env` (see `.env.dist` for inspiration)
+Before running, make sure to copy `.env.dist` → `.env` inside `backend/` and fill in any missing environment variables.
 
 ---
 
-## Database via Docker Compose
+## 🐘 Database Setup (Docker Compose)
+
+Start PostgreSQL and pgAdmin:
 
 ```bash
 docker compose -f .dev/docker-compose.yml --env-file backend/.env up -d db
 ```
 
-**Remove Database**
+Access pgAdmin at [http://localhost:5050](http://localhost:5050).
+Ensure your `.env` credentials match your Docker DB settings so Alembic and FastAPI can connect.
+
+To stop and remove the database (including volumes):
 
 ```bash
-docker compose -f .dev/docker-compose.yml down -v   # removes db_data
+docker compose -f .dev/docker-compose.yml down -v
 ```
 
-This boots PostgreSQL 16 (`sc_postgres`) plus pgAdmin (http://localhost:5050). Use
-the same credentials in `backend/.env` so FastAPI + Alembic can connect.
-Async SQLAlchemy sessions follow the official guidance:
-[SQLAlchemy asyncio docs](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html).
+**Database stack:** PostgreSQL 16 (`sc_postgres`) + pgAdmin.
+Follows official [SQLAlchemy asyncio best practices](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html).
 
-### Migrations
+---
+
+## 🔄 Migrations
 
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-Alembic reads `SYNC_DATABASE_URL` from `.env`. Run `alembic downgrade base` if you
-need to reset the schema locally.
+Alembic reads `SYNC_DATABASE_URL` from `.env`.
+To roll back and reset the schema:
 
-### Seed reference data
+```bash
+alembic downgrade base
+```
+
+---
+
+## 🌱 Seeding Reference Data
 
 ```bash
 cd backend
 python -m scripts.seed_reference
 ```
 
-Seeds insert baseline sports, venues, and a few teams only if they do not already exist. Feel free to edit `app/db/seeds.py`
-to add more demo data.
+This inserts base reference data — sports, venues, and sample teams — if they don’t already exist.
+You can modify `app/db/seeds.py` to customize demo data.
 
-## Domain Model & Data Assumptions
+---
 
-- ERD and PostgreSQL-specific constraints live in
-  [docs/domain-model.md](../docs/domain-model.md).
+## 🧩 Domain Model & Assumptions
 
-## Tests & Coverage
+- The domain model and ER diagram are documented in
+  [`docs/domain-model.md`](../docs/domain-model.md).
+- Each **event** belongs to a **sport** and **venue**, with optional date filters for listing.
+- The schema is optimized for extensibility — e.g., future addition of teams, results, and scheduling modules.
+- Database design assumes PostgreSQL 16 and async SQLAlchemy 2.x.
 
-Run the test suite:
+---
+
+## 🧪 Tests & Coverage
+
+Run all tests:
 
 ```bash
 pytest backend/tests
 ```
 
-Collect coverage (configuration lives in `backend/pyproject.toml`):
+Collect coverage:
 
 ```bash
 coverage run -m pytest backend/tests
 coverage report
 ```
 
-Integration tests that rely on a real PostgreSQL instance expect
-`TEST_DATABASE_URL` to be defined (e.g.,
-`postgresql+psycopg://postgres:postgres@localhost:5433/sports_events_test`).
+Integration tests that require a live DB expect this variable:
+
+```
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/sports_events_test
+```
+
+All test configuration lives in `backend/pyproject.toml`.
 
 ---
 
-## Linting & Formatting
+## 🧹 Linting & Formatting
 
-All style tools share their configuration via `backend/pyproject.toml`.
+All style tools share config in `backend/pyproject.toml`.
+
+Check code style:
 
 ```bash
-ruff check backend/src backend/tests         # static analysis
-black backend/src backend/tests              # code formatter
+ruff check backend/src backend/tests
+black backend/src backend/tests
 ```
 
-Apply Ruff’s auto-fixes if desired:
+Auto-fix common issues:
 
 ```bash
 ruff check backend/src backend/tests --fix
@@ -116,25 +154,22 @@ ruff check backend/src backend/tests --fix
 
 ---
 
-## API Endpoints
+## 🌐 API Endpoints
 
-Base URL: `http://localhost:8000/api/v1`
+**Base URL:** `http://localhost:8000/api/v1`
 
-- `GET /health` – readiness probe.
-- `POST /events` – create a new event (`EventCreate` payload).
-- `GET /events` – list events (optional `sport_id`, `date_from`, `date_to` filters).
-- `GET /events/{event_id}` – retrieve one event.
+| Method | Endpoint             | Description                                                       |
+| ------ | -------------------- | ----------------------------------------------------------------- |
+| `GET`  | `/health`            | Health/readiness check                                            |
+| `POST` | `/events`            | Create a new event (`EventCreate` payload)                        |
+| `GET`  | `/events`            | List events (supports `sport_id`, `date_from`, `date_to` filters) |
+| `GET`  | `/events/{event_id}` | Retrieve a single event by ID                                     |
 
-Example:
+---
 
-```bash
-curl -X POST http://localhost:8000/api/v1/events \
-  -H "Content-Type: application/json" \
-  -d '{
-        "sport_id": "REPLACE_WITH_REAL_SPORT_UUID",
-        "title": "Friendly Match",
-        "starts_at": "2025-01-01T12:00:00Z",
-        "ends_at": "2025-01-01T14:00:00Z",
-        "participants": []
-      }'
-```
+## 💡 Development Decisions & Assumptions
+
+- **FastAPI** was chosen for its async support and easy extensibility.
+- **PostgreSQL + SQLAlchemy** provide a production-grade relational setup with clear migration handling.
+- The backend is designed to be easily containerized and CI-friendly.
+- The **domain model** was intentionally kept simple to focus on structure and testability rather than completeness.
