@@ -29,7 +29,7 @@ All final code, structure, and testing decisions were made and verified by me. I
 ### Frontend
 
 - **Tooling:**
-  The AI helped me set up the frontend developer tooling — mainly ESLint, Prettier, and TypeScript configs. I adjusted rules to match how I like to structure React code and confirmed everything built successfully. The AI also helped wire up the GitHub Actions workflows (backend + frontend) so CI automatically runs lint/tests on every push or pull request.
+  The AI helped me set up the frontend developer tooling — mainly ESLint, Prettier, and TypeScript configs. I adjusted rules to match how I like to structure React code and confirmed everything built successfully. The AI also helped wire up the GitHub Actions workflows.
 
 - **UI/UX feedback:**
   I used the AI for a few design and layout reviews. It gave me quick feedback on styling and readability, but I made the final UI decisions based on my own testing and preferences.

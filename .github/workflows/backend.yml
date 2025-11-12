@@ -13,6 +13,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sports_events_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/sports_events_test
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sports_events_test
+      SYNC_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/sports_events_test
 
     steps:
       - name: Checkout repository
@@ -35,9 +53,24 @@ jobs:
           source .venv/bin/activate
           ruff check backend/src backend/tests
 
-      - name: Run tests
+      - name: Unit tests
         env:
           PYTHONPATH: backend/src
         run: |
           source .venv/bin/activate
           pytest backend/tests -m "not integration"
+
+      - name: Apply migrations
+        env:
+          SYNC_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          source .venv/bin/activate
+          cd backend
+          alembic upgrade head
+
+      - name: Integration tests
+        env:
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          source .venv/bin/activate
+          pytest backend/tests -m integration
