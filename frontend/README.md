@@ -37,6 +37,8 @@ npm run dev
 Then open [http://localhost:5173](http://localhost:5173) in your browser.
 Make sure your backend is running and available at the URL defined by `VITE_API_BASE_URL`.
 
+> **CI**: `.github/workflows/frontend.yml` installs dependencies, runs `npm run lint`, and executes `npm run test` on every push/PR touching frontend files.
+
 ---
 
 ## ⚡ Environment Variables

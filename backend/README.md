@@ -133,6 +133,8 @@ TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/sports_e
 
 All test configuration lives in `backend/pyproject.toml`.
 
+> **CI**: `.github/workflows/backend.yml` runs Ruff + pytest (unit scope) on every push/PR touching backend files so issues surface immediately.
+
 ---
 
 ## 🧹 Linting & Formatting

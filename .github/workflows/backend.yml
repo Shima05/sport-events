@@ -1,0 +1,43 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run:
+          python -m venv .venv &&
+          source .venv/bin/activate &&
+          pip install --upgrade pip &&
+          pip install -e 'backend/.[dev]'
+
+      - name: Lint (ruff)
+        run: |
+          source .venv/bin/activate
+          ruff check backend/src backend/tests
+
+      - name: Run tests
+        env:
+          PYTHONPATH: backend/src
+        run: |
+          source .venv/bin/activate
+          pytest backend/tests -m "not integration"
